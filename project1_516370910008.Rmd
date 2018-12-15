@@ -1,0 +1,446 @@
+---
+title: 
+  "Project 1"
+author: 
+  "Chen zhikai 516370910008"
+header-inclues:
+  - \usepackage{amsmath}
+  - \usepackage{amssymb}
+  - \usepackage{amsthm}  
+  - \usepackage{amsthm}  
+  - \usepackage{listings}
+output: 
+  pdf_document:
+  fig_width: 6
+  fig_height: 6
+---
+
+## Part 1
+
+Read the data in
+```{r}
+setwd("~/Desktop")
+cars.df = read.table("~/Desktop/cars.p.csv.bz2", header = TRUE, sep = ",")
+str(cars.df)
+levels(cars.df$CMPG)
+```
+To deal with the 4th problem, we need a new column indicating the manufacturing place of cars.
+```{r}
+cars.vec = as.character(cars.df$Model)
+place.vec = rep("1", length(cars.df$Model))
+split.vec = strsplit(cars.vec, "[ ]")
+for(i in 1:length(cars.vec)){
+  cars.vec[i] = split.vec[[i]][1]
+}
+US.id = which(cars.vec == "Buick" | cars.vec == "Cadillac" | cars.vec == "Chevrolet" | cars.vec == "Chrysler" | cars.vec == "Dodge" | cars.vec == "Ford" | cars.vec == "GMC" |
+                cars.vec == "Hummer" | cars.vec == "Jeep" | cars.vec == "Lincoln" | cars.vec == "Mercury" | cars.vec == "Oldsmobile" | cars.vec == "Pontiac" | cars.vec == "Saturn" | cars.vec == "Chrvsler")
+GEM.id = which(cars.vec == "Audi" | cars.vec == "BMW" | cars.vec == "Mercedes-Benz" | cars.vec == "Mini" | cars.vec == "Porsche" | cars.vec == "CMC" | cars.vec == "Volkswagen")
+JP.id = which(cars.vec == "Honda" | cars.vec == "Infiniti" | cars.vec == "Isuzu" | cars.vec == "Lexus" | cars.vec == "Mazda" | cars.vec == "Mazda6" | cars.vec == "Mazda3" | cars.vec == "Mitsubishi" | cars.vec == "Nissan" | cars.vec == "Scion" | cars.vec == "Subaru" | cars.vec == "Suzuki" | cars.vec == "Toyota" | cars.vec == "Acura")
+KOR.id = which(cars.vec == "Hyundai" | cars.vec == "Kia")
+UK.id = which(cars.vec == "Jaguar" | cars.vec == "Land")
+cars.df$birth = rep("Others", length(cars.df$Model))
+cars.df$birth[US.id] = "US"
+cars.df$birth[GEM.id] = "GEM"
+cars.df$birth[JP.id] = "JP"
+cars.df$birth[KOR.id] = "KOR"
+cars.df$birth[UK.id] = "UK"
+```
+
+
+Delete the missing data row
+```{r}
+missing_data_index = which(cars.df$CMPG == "*" | cars.df$HMPG == "*" | cars.df$M == "*" | cars.df$WBL == "*" | cars.df$L == "*" | cars.df$W == "*")
+missing_data_index
+cars.nonull.df = cars.df[-c(missing_data_index),]
+which(cars.nonull.df$CMPG == "*")
+cars.nonull.df$CMPG = as.double(as.character(cars.nonull.df$CMPG))
+cars.nonull.df$HMPG = as.double(as.character(cars.nonull.df$HMPG))
+cars.nonull.df$M = as.double(as.character(cars.nonull.df$M))
+cars.nonull.df$WBL = as.double(as.character(cars.nonull.df$WBL))
+cars.nonull.df$L = as.double(as.character(cars.nonull.df$L))
+cars.nonull.df$W = as.double(as.character(cars.nonull.df$W))
+str(cars.nonull.df)
+```
+
+Transform the brand name column into the form that we need
+```{r}
+cars.vec = as.character(cars.nonull.df$Model)
+place.vec = rep("1", length(cars.nonull.df$Model))
+split.vec = strsplit(cars.vec, "[ ]")
+for(i in 1:length(cars.vec)){
+  cars.vec[i] = split.vec[[i]][1]
+}
+cars.nonull.df$Model = cars.vec
+clear_typo = which(cars.nonull.df$Model == "Chrvsler")
+cars.nonull.df$Model[clear_typo] = "Chrysler"
+mazda6_idx = which(cars.nonull.df$Model == "Mazda6")
+cars.nonull.df$Model[mazda6_idx] = "Mazda"
+cars.nonull.df$Model = as.factor(cars.nonull.df$Model)
+cars.nonull.df$birth = as.factor(cars.nonull.df$birth)
+str(cars.nonull.df)
+cars.new.df = cars.nonull.df
+```
+
+Turn some columns into categorical variables to reduce number of predictors
+```{r}
+type.vec = rep(FALSE, length(cars.new.df$Common))
+sports_index = which(cars.new.df$Sports == 1)
+suv_index = which(cars.new.df$SUV == 1)
+wagon_index = which(cars.new.df$Wagon == 1)
+Minivan_index = which(cars.new.df$Minivan == 1)
+PickUp_index = which(cars.new.df$Pickup == 1)
+AWD_id = which(cars.new.df$AWD == 1)
+RWD_id = which(cars.new.df$RWD == 1)
+Common_index = which(cars.new.df$Common == 1)
+type.vec[sports_index] = 'SPORTS'
+type.vec[suv_index] = 'SUV'
+type.vec[wagon_index] = 'WAGON'
+type.vec[Minivan_index] = 'MINIVAN'
+type.vec[PickUp_index] = 'PICKUP'
+type.vec[Common_index] = 'COMMON'
+wd.vec = rep('OTHERWD', length(cars.new.df$AWD))
+AWD.id = which(cars.new.df$AWD == 1)
+RWD.id = which(cars.new.df$RWD == 1)
+wd.vec[AWD.id] = 'AWD'
+wd.vec[RWD.id] = 'RWD'
+cars.new.df$TYPE = type.vec
+cars.new.df$WD = wd.vec
+drops = c('Common', 'Sports', 'SUV', 'Wagon', 'Minivan', 'Pickup', 'AWD', 'RWD')
+cars.new.df = cars.new.df[,!(names(cars.new.df) %in% drops) ]
+```
+
+
+
+
+Check if there are any weird data points
+
+```{r}
+summary(cars.new.df)
+```
+According to this summary, there are obvious weird points in Price considering their practical meanings. We further do a box-plot.
+
+```{r}
+boxplot(cars.new.df$Price)
+boxplot(cars.new.df$Cost)
+boxplot(cars.new.df$Disp)
+boxplot(cars.new.df$Cyli)
+boxplot(cars.new.df$HP)
+boxplot(cars.new.df$CMPG)
+boxplot(cars.new.df$HMPG)
+boxplot(cars.new.df$M)
+boxplot(cars.new.df$WBL)
+boxplot(cars.new.df$L)
+boxplot(cars.new.df$W)
+```
+We further check and fix some weird points
+Check the disp data, we found a Jetta with 20.0 disp. That's no doubt a mistake. However, we don't have any excuses to delete the rows with these large cylinder values.
+```{r}
+neg_price = which(cars.new.df$Price < 0)
+cars.new.df$Price[neg_price] = -cars.new.df$Price[neg_price]
+large_disp = which(cars.new.df$Disp == 20)
+large_cyli = which(cars.new.df$Cyli == 12)
+large_disp
+large_cyli
+cars.new.df[large_disp,]
+cars.new.df[large_cyli,]
+cars.new.df = cars.new.df[-c(large_disp),]
+```
+Now data seems OK other than the 1.00 correlation, We may need some further adjustions in part 2.
+```{r}
+summary(cars.new.df)
+panel.hist <- function(x, ...)
+{
+    usr <- par("usr"); on.exit(par(usr))
+    par(usr = c(usr[1:2], 0, 1.5) )
+    h <- hist(x, plot = FALSE)
+    breaks <- h$breaks; nB <- length(breaks)
+    y <- h$counts; y <- y/max(y)
+    rect(breaks[-nB], 0, breaks[-1], y, col = "cyan", ...)
+}
+panel.cor <- function(x, y, digits = 2, prefix = "", cex.cor, ...)
+{
+    usr <- par("usr"); on.exit(par(usr))
+    par(usr = c(0, 1, 0, 1))
+    r <- abs(cor(x, y))
+    txt <- format(c(r, 0.123456789), digits = digits)[1]
+    txt <- paste0(prefix, txt)
+    if(missing(cex.cor)) cex.cor <- 0.8/strwidth(txt)
+    text(0.5, 0.5, txt, cex = cex.cor * r)
+}
+pairs(cars.new.df[2:12], diag.panel = panel.hist, lower.panel = panel.cor)
+```
+
+
+
+
+## Part 2
+
+```{r}
+str(cars.new.df)
+cars.new.df
+```
+Firstly, we can see cost and price are highly correlated(corr 1.0 and R^2 0.9983, if we take cost column, no need to use other regressors). Considering the practical meanings, we must delete this column. Also the HMPG and CMPG term,
+they are actually too linearly correlated, we can only leave one of them. I think "HMPG" can represent the most cases and I delete CMPG. Moreover, birth is derived directly from model column, so we need to delete them at this time. 
+```{r}
+cars.nouse.lm = lm(Price~Cost, data = cars.new.df)
+summary(cars.nouse.lm)
+plot(cars.new.df$HMPG, cars.new.df$CMPG, xlab = "HMPG", ylab ="CMPG")
+abline(a = 0, b = 1, col = 'red', lty = 2)
+drops = c("Cost", "CMPG", "birth")
+cars.new.df = cars.new.df[,!(names(cars.new.df) %in% drops) ]
+str(cars.new.df)
+```
+
+```{r}
+cars.new.df$TYPE = as.factor(cars.new.df$TYPE)
+cars.new.df$WD = as.factor(cars.new.df$WD)
+cars.new.df$Model = as.factor(cars.new.df$Model)
+str(cars.new.df)
+
+```
+
+
+```{r}
+library(leaps)
+leaps.out = regsubsets(Price~., data = cars.new.df, nbest = 1, nvmax = NULL, method = "forward")
+summary(leaps.out)
+plot(leaps.out, main = "BIC")
+```
+Check the effect
+```{r}
+cars.lm = lm(Price~HP+HMPG+M+WBL+TYPE+Model, data = cars.new.df)
+summary(cars.lm)
+fvs = fitted.values(cars.lm)
+res = residuals(cars.lm)
+sres = rstandard(cars.lm)
+plot(fvs, sres, xlab = "fitted values", ylab = "sres")
+abline(a = 0, b = 0, col = 'red', lty = 2)
+for (i in 2:10){
+    plot(cars.new.df[,i], sres)
+    abline(a = 0, b= 0, col = 'red', lty = 2)
+}
+```
+
+From above the assumption is not very satisfied(such as equal variance)
+Try Box-cox
+```{r}
+library(MASS)
+x.LM = lm(Price~1, data = cars.new.df)
+bc = boxcox(x.LM)
+title("Box cox plot")
+```
+Try lambda = -0.2
+```{r}
+leaps.out = regsubsets((Price^(-0.2) - 1) / (-0.2)~., data = cars.new.df, nbest = 1, nvmax = NULL, method = "forward")
+summary(leaps.out)
+plot(leaps.out, main = "BIC")
+```
+
+
+## Part 3
+According to variable selection, 
+```{r}
+cars.lm = lm((Price^(-0.2) - 1) / (-0.2)~Model+HP+M+L+W+TYPE+WD, data = cars.new.df)
+summary(cars.lm)
+```
+
+Firstly, we check the assumptions of linear regression. 
+```{r}
+fvs = fitted.values(cars.lm)
+res = residuals(cars.lm)
+sres = rstandard(cars.lm)
+plot(fvs, sres, xlab = "fitted values", ylab = "sres")
+abline(a = 0, b = 0, col = 'red', lty = 2)
+for (i in 2:10){
+    plot(cars.new.df[,i], sres)
+    abline(a = 0, b= 0, col = 'red', lty = 2)
+}
+
+```
+All above seem OK.
+```{r}
+sz = length(cars.lm$residuals)
+plot(cars.lm$residuals[-sz], cars.lm$residuals[-1], xlab = "Prev", ylab = "Residuals")
+```
+```{r}
+acf(cars.lm$residuals, main = "ACF plot")
+```
+No multicolinearity problem. 
+```{r}
+qqnorm(cars.lm$residuals)
+qqline(cars.lm$residuals, col = 2)
+shapiro.test(cars.lm$residuals)
+```
+Normality seems OK.
+Check VIF
+```{r}
+X_minus_cat = cars.new.df[,-c(1,2,11,12)]
+VIF = diag(solve(cor(X_minus_cat)))
+VIF
+
+```
+VIF OK.
+Check influential point
+```{r}
+pii.vec = hatvalues(cars.lm)
+boxplot(pii.vec)
+plot(pii.vec, sres, xlab = "Leverage Score", ylab = "Standardised Residual", main = "Residual vs leverage")
+abline(a = 0, b = 0, col = 2, lty = 3)
+influence.measures(cars.lm)
+
+```
+```{r}
+order(pii.vec, decreasing= TRUE)
+order(abs(sres), decreasing=TRUE)
+im = influence.measures(cars.lm)
+summary(im)
+```
+```{r}
+cars.new.df[c(4,144,100),]
+```
+
+We found that 4 and 144 are both influential outliers, so we decide to delete them. 100 is influential but not an outlier, and deleting 100 will lead to linear dependency problem. So I decide to keep it. 
+```{r}
+cars.new.df = cars.new.df[-c(4, 144),]
+leaps.out = regsubsets((Price^(-0.2) - 1) / (-0.2)~., data = cars.new.df, nbest = 1, nvmax = NULL, method = "forward")
+summary(leaps.out)
+plot(leaps.out, main = "BIC")
+```
+```{r}
+
+cars.lm = lm((Price^(-0.2) - 1) / (-0.2)~Model+HP+M+L+W+TYPE+WD+HMPG, data = cars.new.df)
+summary(cars.lm)
+```
+
+Then we do all the diagnostics again.
+Firstly, we check the assumptions of linear regression. 
+```{r}
+fvs = fitted.values(cars.lm)
+res = residuals(cars.lm)
+sres = rstandard(cars.lm)
+plot(fvs, sres, xlab = "fitted values", ylab = "sres")
+abline(a = 0, b = 0, col = 'red', lty = 2)
+for (i in 2:10){
+    plot(cars.new.df[,i], sres)
+    abline(a = 0, b= 0, col = 'red', lty = 2)
+}
+
+```
+All above seem OK.
+```{r}
+sz = length(cars.lm$residuals)
+plot(cars.lm$residuals[-sz], cars.lm$residuals[-1], xlab = "Prev", ylab = "Residuals")
+```
+```{r}
+acf(cars.lm$residuals, main = "ACF plot")
+```
+No multicolinearity problem. 
+```{r}
+qqnorm(cars.lm$residuals)
+qqline(cars.lm$residuals, col = 2)
+shapiro.test(cars.lm$residuals)
+```
+Normality seems OK.
+Check VIF
+```{r}
+X_minus_cat = cars.new.df[,-c(1,2,11,12)]
+VIF = diag(solve(cor(X_minus_cat)))
+VIF
+
+```
+VIF OK.
+So we take this as our final explantory model.
+```{r}
+summary(cars.lm)
+```
+
+## Part 4
+We go back to original cars dataframe.
+
+```{r}
+str(cars.nonull.df)
+neg_price = which(cars.nonull.df$Price < 0)
+cars.nonull.df$Price[neg_price] = -cars.nonull.df$Price[neg_price]
+large_disp = which(cars.nonull.df$Disp == 20)
+large_cyli = which(cars.nonull.df$Cyli == 12)
+cars.nonull.df = cars.nonull.df[-c(large_disp),]
+reg.out = regsubsets(Price~.,data = cars.nonull.df[-c(1, 21)], nvmax = NULL, nbest = 1, method = "exhaustive")
+summary(reg.out)
+```
+Getting the needed data
+```{r}
+cars_1.df = cbind(cars.nonull.df[c(10)], cars.nonull.df[c(11)])
+cars_2.df = cbind(cars.nonull.df[c(10)], cars.nonull.df[c(11, 20)])
+cars_3.df = cbind(cars.nonull.df[c(10)], cars.nonull.df[c(11, 20, 18)])
+cars_4.df = cbind(cars.nonull.df[c(10)], cars.nonull.df[c(11, 20, 18, 12)])
+cars_5.df = cbind(cars.nonull.df[c(10)], cars.nonull.df[c(11, 20, 18, 12, 9)])
+cars_6.df = cbind(cars.nonull.df[c(10)], cars.nonull.df[c(11, 20, 18, 12, 9, 19)])
+cars_7.df = cbind(cars.nonull.df[c(10)], cars.nonull.df[c(11, 20, 18, 12, 9, 19, 3)])
+cars_8.df = cbind(cars.nonull.df[c(10)], cars.nonull.df[c(11, 20, 18, 12, 9, 19, 3, 2)])
+cars_9.df = cbind(cars.nonull.df[c(10)], cars.nonull.df[c(11, 20, 18, 12, 9, 19, 3, 2, 5)])
+cars_10.df = cbind(cars.nonull.df[c(10)], cars.nonull.df[c(11, 20, 18, 12, 9, 19, 3, 2, 5, 16)])
+cars_11.df = cbind(cars.nonull.df[c(10)], cars.nonull.df[c(11, 20, 18, 12, 9, 19, 3, 2, 5, 16, 10)])
+cars_12.df = cbind(cars.nonull.df[c(10)], cars.nonull.df[c(11, 20, 18, 12, 9, 19, 3, 2, 5, 16, 10, 14)])
+cars_13.df = cbind(cars.nonull.df[c(10)], cars.nonull.df[c(11, 20, 18, 12, 9, 19, 3, 2, 5, 16, 10, 14, 15)])
+cars_14.df = cbind(cars.nonull.df[c(10)], cars.nonull.df[c(11, 20, 18, 12, 9, 19, 3, 2, 5, 16, 10, 14, 15, 13)])
+cars_15.df = cbind(cars.nonull.df[c(10)], cars.nonull.df[c(11, 20, 18, 12, 9, 19, 3, 2, 5, 16, 10, 14, 15, 13, 17)])
+cars_16.df = cbind(cars.nonull.df[c(10)], cars.nonull.df[c(11, 20, 18, 12, 9, 19, 3, 2, 5, 16, 10, 14, 15, 13, 17, 4)])
+```
+
+```{r}
+library(boot)
+my.func = function(formula, data, indices){
+  d = data[indices,]
+  fit = lm(formula, data = data)
+  return(sum(residuals(fit)^2) / df.residual(fit))
+  
+}
+results = rep(0, 16)
+bootobj = boot(data=cars_1.df, statistic = my.func, R = 1000, formula=Price~.)
+results[1] = bootobj$t0
+bootobj = boot(data=cars_2.df, statistic = my.func, R = 1000, formula=Price~.)
+results[2] = bootobj$t0
+bootobj = boot(data=cars_3.df, statistic = my.func, R = 1000, formula=Price~.)
+results[3] = bootobj$t0
+bootobj = boot(data=cars_4.df, statistic = my.func, R = 1000, formula=Price~.)
+results[4] = bootobj$t0
+bootobj = boot(data=cars_5.df, statistic = my.func, R = 1000, formula=Price~.)
+results[5] = bootobj$t0
+bootobj = boot(data=cars_6.df, statistic = my.func, R = 1000, formula=Price~.)
+results[6] = bootobj$t0
+bootobj = boot(data=cars_7.df, statistic = my.func, R = 1000, formula=Price~.)
+results[7] = bootobj$t0
+bootobj = boot(data=cars_8.df, statistic = my.func, R = 1000, formula=Price~.)
+results[8] = bootobj$t0
+bootobj = boot(data=cars_9.df, statistic = my.func, R = 1000, formula=Price~.)
+results[9] = bootobj$t0
+bootobj = boot(data=cars_10.df, statistic = my.func, R = 1000, formula=Price~.)
+results[10] = bootobj$t0
+bootobj = boot(data=cars_11.df, statistic = my.func, R = 1000, formula=Price~.)
+results[11] = bootobj$t0
+bootobj = boot(data=cars_12.df, statistic = my.func, R = 1000, formula=Price~.)
+results[12] = bootobj$t0
+bootobj = boot(data=cars_13.df, statistic = my.func, R = 1000, formula=Price~.)
+results[13] = bootobj$t0
+bootobj = boot(data=cars_14.df, statistic = my.func, R = 1000, formula=Price~.)
+results[14] = bootobj$t0
+bootobj = boot(data=cars_15.df, statistic = my.func, R = 1000, formula=Price~.)
+results[15] = bootobj$t0
+bootobj = boot(data=cars_16.df, statistic = my.func, R = 1000, formula=Price~.)
+results[16] = bootobj$t0
+order(results, decreasing = FALSE)
+results
+```
+
+We use cars_10 model
+```{r}
+us_id = which(cars.nonull.df$birth == "US")
+other_id = which(cars.nonull.df$birth != "US")
+us_data = cars_10.df[us_id,]
+other_data = cars_10.df[other_id,]
+us_lm = lm(Price~., data = us_data)
+other_lm = lm(Price~., data = other_data)
+summary(us_lm)
+summary(other_lm)
+```
+Finally, Looking at the R^2 statistics at these two Models, We can argue that the American brand matters. (It should be mentioned that since we include the cost column, so any minor difference would be taken as evidence).
